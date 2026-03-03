@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronRight, Plus } from 'lucide-react';
+import { ChevronRight, Plus, Zap } from 'lucide-react';
 import Link from 'next/link';
 
 /* ───── Mock Data ───── */
@@ -14,6 +14,7 @@ const holdToEarnCampaigns = [
     claimProgress: 0.31,
     image: '/morpho.svg',
     readyToClaim: false,
+    aggregated: true,
   },
   {
     name: 'Supply USDC on Aave',
@@ -227,9 +228,14 @@ export default function ExploreA() {
                         </p>
                       </div>
                       <div className="shrink-0 text-right">
-                        <p className="text-[18px] font-bold text-[#56B548] tracking-tight leading-none">
-                          {campaign.apy}%
-                        </p>
+                        <div className="flex items-center gap-0.5 justify-end">
+                          {campaign.aggregated && (
+                            <Zap className="w-3.5 h-3.5 text-[#EAB308] fill-[#EAB308]" strokeWidth={2.5} />
+                          )}
+                          <p className="text-[18px] font-bold text-[#56B548] tracking-tight leading-none">
+                            {campaign.apy}%
+                          </p>
+                        </div>
                         <p className="text-[11px] text-[#72767f] font-medium mt-0.5">
                           APY
                         </p>
