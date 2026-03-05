@@ -258,7 +258,7 @@ function StepHoldMoreEarnMore() {
   const tiers = [
     { tokens: 2, label: '$100', rate: '1.2%', barWidth: 80, delay: 0.6 },
     { tokens: 4, label: '$1,000', rate: '3.5%', barWidth: 160, delay: 1.2 },
-    { tokens: 6, label: '$10,000', rate: '8.0%', barWidth: 260, delay: 1.8 },
+    { tokens: 6, label: '$10,000', rate: '8.0%', barWidth: '100%', delay: 1.8 },
   ];
 
   return (
