@@ -253,7 +253,92 @@ function StepRewardsFlow() {
   );
 }
 
-/* ─── Page 3: Watch It Grow ─── */
+/* ─── Page 3: Hold More, Earn More ─── */
+function StepHoldMoreEarnMore() {
+  const tiers = [
+    { tokens: 2, label: '$100', rate: '1.2%', barWidth: 80, delay: 0.6 },
+    { tokens: 4, label: '$1,000', rate: '3.5%', barWidth: 160, delay: 1.2 },
+    { tokens: 6, label: '$10,000', rate: '8.0%', barWidth: 260, delay: 1.8 },
+  ];
+
+  return (
+    <div className="flex flex-col items-center justify-center h-full px-8">
+      {/* Tier bars */}
+      <div className="w-full max-w-[300px] mb-10 space-y-5">
+        {tiers.map((tier, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: tier.delay, duration: 0.5, ease: 'easeOut' }}
+          >
+            {/* Label row */}
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-1.5">
+                {/* Token stack */}
+                <div className="flex -space-x-2">
+                  {tokenImages.slice(0, tier.tokens).map((src, j) => (
+                    <motion.div
+                      key={j}
+                      className="rounded-full overflow-hidden bg-white border border-[#222]"
+                      style={{ width: 18, height: 18, zIndex: tier.tokens - j }}
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: tier.delay + 0.1 + j * 0.06, duration: 0.3, type: 'spring', stiffness: 250 }}
+                    >
+                      <img src={src} alt="" className="w-full h-full object-cover" />
+                    </motion.div>
+                  ))}
+                </div>
+                <span className="text-white/40 text-[12px] font-medium">{tier.label}</span>
+              </div>
+              <motion.span
+                className="text-white font-bold text-[15px]"
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: tier.delay + 0.3, duration: 0.4, type: 'spring', stiffness: 200 }}
+              >
+                {tier.rate}
+              </motion.span>
+            </div>
+            {/* Bar */}
+            <div className="w-full h-[8px] rounded-full bg-white/8 overflow-hidden">
+              <motion.div
+                className="h-full rounded-full"
+                style={{
+                  background: `linear-gradient(90deg, rgba(255,255,255,${0.12 + i * 0.08}) 0%, rgba(255,255,255,${0.25 + i * 0.12}) 100%)`,
+                }}
+                initial={{ width: 0 }}
+                animate={{ width: tier.barWidth }}
+                transition={{ delay: tier.delay + 0.15, duration: 0.8, ease: 'easeOut' }}
+              />
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Text */}
+      <motion.h2
+        className="text-white text-[22px] font-bold tracking-[-0.3px] text-center"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4, duration: 0.5 }}
+      >
+        Hold More, Earn More
+      </motion.h2>
+      <motion.p
+        className="text-white/50 text-[14px] text-center mt-2 leading-snug"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.55, duration: 0.5 }}
+      >
+        Bigger holdings unlock higher rates
+      </motion.p>
+    </div>
+  );
+}
+
+/* ─── Page 4: Watch It Grow ─── */
 function StepWatchItGrow() {
   const milestones = [
     { pct: 17, amount: '$12', delay: 1.0, label: 'Day 1' },
@@ -472,7 +557,7 @@ function StepClaimAnytime({ onClose }: { onClose: () => void }) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5, duration: 0.5 }}
       >
-        Claim Anytime
+        Claim Every 4 Hours
       </motion.h2>
       <motion.p
         className="text-white/50 text-[14px] text-center mt-2 leading-snug"
@@ -480,7 +565,7 @@ function StepClaimAnytime({ onClose }: { onClose: () => void }) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.65, duration: 0.5 }}
       >
-        Your rewards are always ready to collect
+        Rewards unlock on a 4-hour cycle
       </motion.p>
 
       {/* CTA */}
@@ -498,7 +583,7 @@ function StepClaimAnytime({ onClose }: { onClose: () => void }) {
 }
 
 /* ─── Main Overlay ─── */
-const steps = ['Just Hold', 'Rewards Flow', 'Watch It Grow', 'Claim Anytime'];
+const steps = ['Just Hold', 'Rewards Flow', 'Hold More', 'Watch It Grow', 'Claim'];
 
 export default function HoldToEarnExplainer({
   open,
@@ -553,8 +638,9 @@ export default function HoldToEarnExplainer({
               >
                 {step === 0 && <StepJustHold />}
                 {step === 1 && <StepRewardsFlow />}
-                {step === 2 && <StepWatchItGrow />}
-                {step === 3 && <StepClaimAnytime onClose={onClose} />}
+                {step === 2 && <StepHoldMoreEarnMore />}
+                {step === 3 && <StepWatchItGrow />}
+                {step === 4 && <StepClaimAnytime onClose={onClose} />}
               </motion.div>
             </AnimatePresence>
           </div>
