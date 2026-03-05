@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, X } from 'lucide-react';
 
-const tokenImages = ['/ETH.png', '/DAI.png', '/USDT.png', '/OP.png', '/USDC.png', '/aave.png', '/WLD.png'];
+const tokenImages = ['/ETH.png', '/DAI.png', '/USDT.png', '/HYPE.png', '/USDC.png', '/aave.png', '/WLD.png'];
 
 /* ─── Page 1: Just Hold ─── */
 function StepJustHold() {

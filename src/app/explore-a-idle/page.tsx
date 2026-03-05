@@ -54,7 +54,7 @@ const singleClaimRewards = [
 ];
 
 /* ───── Flowing Token (cycles image each loop) ───── */
-const tokenImages = ['/ETH.png', '/DAI.png', '/USDT.png', '/OP.png', '/USDC.png', '/aave.png', '/WLD.png'];
+const tokenImages = ['/ETH.png', '/DAI.png', '/USDT.png', '/HYPE.png', '/USDC.png', '/aave.png', '/WLD.png'];
 const tokenTimes = [0, 0.1, 0.85, 1];
 
 function FlowingToken({ slot, startIndex }: { slot: { x: number[]; y: number[]; duration: number; delay: number; size: number }; startIndex: number }) {
