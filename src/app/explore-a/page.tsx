@@ -1,0 +1,701 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronRight, Plus, X, Zap } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import HoldToEarnExplainer from '../../components/HoldToEarnExplainer';
+
+/* ───── Mock Data ───── */
+const holdToEarnCampaigns = [
+  {
+    name: 'Deposit WLD on Morpho',
+    apy: '4.25',
+    protocol: 'Morpho',
+    status: 'Earning',
+    claimCountdown: '',
+    claimProgress: 1,
+    image: '/morpho.svg',
+    readyToClaim: true,
+    aggregated: true,
+    claimableAmount: '$1.62',
+  },
+  {
+    name: 'Supply USDC on Aave',
+    apy: '5.60',
+    protocol: 'Aave',
+    status: 'Earning',
+    claimCountdown: '',
+    claimProgress: 1,
+    image: '/aave.png',
+    readyToClaim: true,
+    claimableAmount: '$0.85',
+  },
+  {
+    name: 'Stake ETH on Lido',
+    apy: '3.10',
+    protocol: 'Lido',
+    status: 'Earning',
+    claimCountdown: '3h 58m',
+    claimProgress: 0.01,
+    image: '/lido.jpg',
+    readyToClaim: false,
+  },
+];
+
+const pendingClaims = [
+  {
+    name: 'Supply DAI on Credit',
+    lastReward: '$0.85',
+    protocol: 'Credit',
+    image: '/credit.png',
+  },
+];
+
+const singleClaimRewards = [
+  {
+    name: 'Borrow on Morpho',
+    reward: 'Get 5% back',
+    stat: '$50 claimed',
+    image: '/morpho.svg',
+  },
+  {
+    name: 'Borrow on Credit',
+    reward: 'Get 5% back',
+    stat: '$7 claimed',
+    image: '/credit.png',
+  },
+  {
+    name: 'Swap on Odos',
+    reward: 'Earn $0.25',
+    stat: '$890 claimed',
+    image: '/odos.png',
+    bgBlack: true,
+  },
+];
+
+/* ───── Progress Ring ───── */
+function MiniProgressRing({
+  progress,
+  size = 36,
+  color = 'green',
+}: {
+  progress: number;
+  size?: number;
+  color?: 'green' | 'blue';
+}) {
+  const strokeWidth = 3;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference * (1 - progress);
+  const bgStroke = color === 'blue' ? '#DBEAFE' : '#E8F5E9';
+  const fgStroke = color === 'blue' ? '#3B82F6' : '#56B548';
+
+  return (
+    <svg width={size} height={size} className="shrink-0 -rotate-90">
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke={bgStroke}
+        strokeWidth={strokeWidth}
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke={fgStroke}
+        strokeWidth={strokeWidth}
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/* ───── Flowing Token (cycles image each loop) ───── */
+const tokenImages = ['/ETH.png', '/DAI.png', '/USDT.png', '/HYPE.png', '/USDC.png', '/aave.png', '/WLD.png'];
+const tokenTimes = [0, 0.1, 0.85, 1];
+
+function FlowingToken({ slot, startIndex }: { slot: { x: number[]; y: number[]; duration: number; delay: number; size: number }; startIndex: number }) {
+  const [imgIdx, setImgIdx] = useState(startIndex);
+  const [isFirst, setIsFirst] = useState(true);
+
+  useEffect(() => {
+    const wait = (isFirst ? slot.delay : 0) + slot.duration;
+    const timer = setTimeout(() => {
+      setImgIdx((prev) => (prev + 1) % tokenImages.length);
+      setIsFirst(false);
+    }, wait * 1000);
+    return () => clearTimeout(timer);
+  }, [imgIdx, isFirst, slot.delay, slot.duration]);
+
+  return (
+    <motion.div
+      key={imgIdx}
+      className="absolute left-1/2 top-[44%] z-10"
+      style={{ marginLeft: -slot.size / 2, marginTop: -slot.size / 2 }}
+      initial={{ x: slot.x[0], y: slot.y[0], opacity: 0, scale: 0.5 }}
+      animate={{
+        x: slot.x,
+        y: slot.y,
+        opacity: [0, 1, 1, 0],
+        scale: [0.5, 1, 0.85, 0.1],
+      }}
+      transition={{
+        duration: slot.duration,
+        delay: isFirst ? slot.delay : 0,
+        times: tokenTimes,
+        ease: 'linear',
+      }}
+    >
+      <div
+        className="rounded-full overflow-hidden shadow-[0_0_8px_rgba(86,181,72,0.3)] bg-white"
+        style={{ width: slot.size, height: slot.size }}
+      >
+        <img src={tokenImages[imgIdx]} alt="" className="w-full h-full object-cover" />
+      </div>
+    </motion.div>
+  );
+}
+
+/* ───── Hold to Earn Banner ───── */
+function HoldToEarnBanner({ onClick }: { onClick?: () => void }) {
+  /* Stream paths — continuously flow from edges toward center orb */
+  const streams = [
+    { d: 'M-10,20 Q60,25 155,68', duration: 4.0, delay: 0, len: 0.8 },
+    { d: 'M-10,70 Q80,65 155,68', duration: 2.0, delay: 1.7, len: 0.3 },
+    { d: 'M-10,120 Q70,100 155,68', duration: 3.2, delay: 3.8, len: 0.55 },
+    { d: 'M30,-10 Q90,40 155,68', duration: 2.4, delay: 0.9, len: 0.35 },
+    { d: 'M155,-10 Q155,30 155,68', duration: 3.6, delay: 2.5, len: 0.7 },
+    { d: 'M320,20 Q240,25 155,68', duration: 1.8, delay: 0.3, len: 0.25 },
+    { d: 'M320,68 Q240,68 155,68', duration: 3.0, delay: 4.1, len: 0.5 },
+    { d: 'M320,130 Q230,100 155,68', duration: 4.2, delay: 1.2, len: 0.85 },
+    { d: 'M80,166 Q120,120 155,68', duration: 2.2, delay: 3.0, len: 0.3 },
+    { d: 'M240,166 Q200,110 155,68', duration: 3.4, delay: 2.1, len: 0.65 },
+  ];
+  /* Token animation slots — images cycle automatically via FlowingToken */
+  const tokenSlots = [
+    { x: [-190, -130, -50, 0], y: [-48, -46, -22, 0], duration: 3.2, delay: 0, size: 28 },
+    { x: [155, 110, 40, 0], y: [-53, -42, -18, 0], duration: 3.5, delay: 0.6, size: 26 },
+    { x: [-125, -90, -35, 0], y: [-88, -65, -28, 0], duration: 3.8, delay: 1.2, size: 24 },
+    { x: [155, 115, 42, 0], y: [62, 48, 18, 0], duration: 3.4, delay: 1.8, size: 26 },
+    { x: [-190, -130, -45, 0], y: [2, -2, -6, 0], duration: 3.6, delay: 2.4, size: 24 },
+    { x: [155, 108, 35, 0], y: [-88, -62, -24, 0], duration: 3.3, delay: 3.0, size: 22 },
+    { x: [-140, -95, -32, 0], y: [62, 46, 16, 0], duration: 3.7, delay: 3.6, size: 24 },
+    { x: [130, 90, 28, 0], y: [20, 16, 6, 0], duration: 3.5, delay: 4.2, size: 22 },
+  ];
+
+  return (
+    <div className="px-5 pt-4">
+      <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-[#0a1f0a] to-[#143314] h-[156px] cursor-pointer" onClick={onClick}>
+        {/* SVG — stream lines + center glow */}
+        <svg
+          viewBox="0 0 310 156"
+          fill="none"
+          className="absolute inset-0 w-full h-full"
+          preserveAspectRatio="xMidYMid slice"
+        >
+          <defs>
+            <radialGradient id="glow" cx="155" cy="68" r="60" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#56B548" stopOpacity="0.35" />
+              <stop offset="100%" stopColor="#56B548" stopOpacity="0" />
+            </radialGradient>
+            <radialGradient id="glowInner" cx="155" cy="68" r="22" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#7cdc6f" stopOpacity="0.5" />
+              <stop offset="100%" stopColor="#56B548" stopOpacity="0" />
+            </radialGradient>
+          </defs>
+
+          {/* Ambient glow */}
+          <circle cx="155" cy="68" r="65" fill="url(#glow)" />
+          <circle cx="155" cy="68" r="24" fill="url(#glowInner)" />
+
+          {/* Stream lines — flowing toward center orb */}
+          {streams.map((s, i) => (
+            <motion.path
+              key={i}
+              d={s.d}
+              stroke="#2d6b26"
+              strokeWidth={1.5}
+              strokeLinecap="round"
+              fill="none"
+              initial={{ pathLength: 0, pathOffset: 0, opacity: 0 }}
+              animate={{
+                pathLength: [0, s.len, s.len, 0],
+                pathOffset: [0, 0, 1 - s.len, 1],
+                opacity: [0, 0.25, 0.2, 0],
+              }}
+              transition={{
+                duration: s.duration,
+                delay: s.delay,
+                repeat: Infinity,
+                ease: 'linear',
+              }}
+            />
+          ))}
+
+          {/* Center orb */}
+          <motion.circle
+            cx="155"
+            cy="68"
+            r="10"
+            fill="#56B548"
+            animate={{ scale: [1, 1.12, 1], opacity: [0.9, 1, 0.9] }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+          />
+          <circle cx="155" cy="68" r="5" fill="#a3f09a" />
+
+          {/* Pulse ring */}
+          <motion.circle
+            cx="155"
+            cy="68"
+            r="18"
+            stroke="#56B548"
+            strokeWidth={1}
+            fill="none"
+            animate={{ opacity: [0.4, 0], scale: [0.8, 1.8] }}
+            transition={{ duration: 2.5, repeat: Infinity, ease: 'easeOut' }}
+          />
+        </svg>
+
+        {/* Flowing token avatars — image cycles each loop */}
+        {tokenSlots.map((slot, i) => (
+          <FlowingToken key={i} slot={slot} startIndex={i % tokenImages.length} />
+        ))}
+
+        {/* Text overlay — bottom left */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 pt-8 bg-gradient-to-t from-[#0a1f0a]/90 to-transparent z-20">
+          <p className="text-white font-bold text-[17px] tracking-[-0.17px] leading-tight flex items-center gap-1.5">
+            Hold to Earn
+            <span className="text-[10px] font-bold uppercase tracking-wide bg-[#3B82F6] text-white px-1.5 h-[16px] leading-none inline-flex items-center rounded">NEW</span>
+          </p>
+          <p className="text-[#8fcc86] text-[13px] font-medium mt-0.5">
+            Hold tokens. Get paid. It's that easy.
+          </p>
+        </div>
+
+        {/* Chevron — bottom right */}
+        <div className="absolute bottom-4 right-4 z-20">
+          <ChevronRight className="w-5 h-5 text-white/50" strokeWidth={2} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ───── Project Icon ───── */
+function ProjectIcon({ src, bgBlack }: { src: string; bgBlack?: boolean }) {
+  return (
+    <div
+      className={`w-12 h-12 rounded-[10px] overflow-hidden shrink-0 flex items-center justify-center ${bgBlack ? 'bg-black' : ''}`}
+    >
+      <img
+        src={src}
+        alt=""
+        className={
+          bgBlack ? 'w-7 h-7 object-contain' : 'w-full h-full object-cover'
+        }
+      />
+    </div>
+  );
+}
+
+/* ───── Page ───── */
+export default function ExploreA() {
+  const [showExplainer, setShowExplainer] = useState(false);
+  const [showCheckIn, setShowCheckIn] = useState(false);
+  const [checkInClaimed, setCheckInClaimed] = useState(false);
+  const router = useRouter();
+
+  const readyCampaigns = holdToEarnCampaigns.filter((c) => c.readyToClaim);
+
+  function openCheckIn() { setShowCheckIn(true); }
+  function closeCheckIn() {
+    setShowCheckIn(false);
+    setTimeout(() => setCheckInClaimed(false), 400);
+  }
+
+  return (
+    <div className="phone-frame">
+      <div className="phone-screen relative">
+        <div className="phone-screen-inner">
+          {/* Lifetime earnings + Check In */}
+          <div className="px-5 pt-4 pb-2 flex items-center justify-between">
+            <div>
+              <p className="text-[14px] text-[#72767f] font-medium">
+                Lifetime earnings
+              </p>
+              <p className="text-[32px] font-semibold text-black tracking-tight">
+                $20.93
+              </p>
+            </div>
+            <button
+              onClick={openCheckIn}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white border border-[#E5E5E5]"
+            >
+              <span className="text-[14px] font-semibold text-black tracking-[-0.14px]">
+                Check In
+              </span>
+              <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 flex items-center justify-center text-[11px] font-bold text-white leading-none">
+                {readyCampaigns.length}
+              </span>
+            </button>
+          </div>
+
+          {/* Hold to Earn announcement banner */}
+          <HoldToEarnBanner onClick={() => setShowExplainer(true)} />
+
+          {/* Explore rewards header */}
+          <div className="px-5 pt-6 pb-2">
+            <h2 className="text-[21px] font-medium tracking-[-0.63px] text-black">
+              Explore rewards
+            </h2>
+            <div className="flex gap-1 items-center mt-2">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <circle
+                  cx="9"
+                  cy="9"
+                  r="7.5"
+                  stroke="black"
+                  strokeWidth="1.2"
+                />
+                <ellipse
+                  cx="9"
+                  cy="9"
+                  rx="3"
+                  ry="7.5"
+                  stroke="black"
+                  strokeWidth="1.2"
+                />
+                <path d="M1.5 9H16.5" stroke="black" strokeWidth="1.2" />
+              </svg>
+              <p className="text-[15px] text-black tracking-[-0.15px]">
+                $75 claimed in past day
+              </p>
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div className="px-5 pt-4 pb-2 flex gap-2 overflow-x-auto hide-scrollbar">
+            <button className="shrink-0 px-4 rounded-full h-[38px] text-[15px] font-semibold tracking-[-0.15px] bg-black text-white border border-black">
+              Trending
+            </button>
+            <button className="shrink-0 px-4 rounded-full h-[38px] text-[15px] font-semibold tracking-[-0.15px] bg-transparent text-black border border-[#E5E5E5]">
+              DeFi
+            </button>
+            <button className="shrink-0 px-4 rounded-full h-[38px] text-[15px] font-semibold tracking-[-0.15px] bg-transparent text-black border border-[#E5E5E5]">
+              Highest Reward
+            </button>
+            <button className="shrink-0 px-4 rounded-full h-[38px] text-[15px] font-semibold tracking-[-0.15px] bg-transparent text-black border border-[#E5E5E5]">
+              Recent
+            </button>
+          </div>
+
+          {/* HOLD TO EARN — Section */}
+          <div className="px-5 pt-6">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#7E8795] mb-3">
+              Hold to earn
+            </p>
+
+            {/* ELEVATED CARDS */}
+            <div className="flex flex-col gap-2.5">
+              {holdToEarnCampaigns.map((campaign, i) => (
+                <div key={i} className="cursor-pointer" onClick={() => router.push('/detail-c')}>
+                  <div className="bg-[#f0faf0] rounded-2xl border border-[#56B548]/10 overflow-hidden">
+                    <div className="flex gap-3 items-center p-3.5 pb-2.5">
+                      <div className="w-10 h-10 rounded-[8px] overflow-hidden shrink-0">
+                        <img
+                          src={campaign.image}
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-[14px] text-black tracking-[-0.14px] truncate">
+                          {campaign.name}
+                        </p>
+                        <p className="text-[12px] text-[#72767f] font-medium mt-0.5">
+                          on {campaign.protocol}
+                        </p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="flex items-center gap-0.5 justify-end">
+                          {campaign.aggregated && (
+                            <Zap className="w-3.5 h-3.5 text-[#EAB308] fill-[#EAB308]" strokeWidth={2.5} />
+                          )}
+                          <p className="text-[18px] font-bold text-[#56B548] tracking-tight leading-none">
+                            {campaign.apy}%
+                          </p>
+                        </div>
+                        <p className="text-[11px] text-[#72767f] font-medium mt-0.5">
+                          APY
+                        </p>
+                      </div>
+                    </div>
+                    {/* Bottom bar — claim countdown + deposit action */}
+                    <div className="flex items-center justify-between px-3.5 py-2 bg-[#56B548]/8 border-t border-[#56B548]/10">
+                      <div className="flex items-center gap-1.5">
+                        <MiniProgressRing
+                          progress={campaign.claimProgress}
+                          size={18}
+                        />
+                        <span className="text-[12px] font-semibold text-[#3d8a34]">
+                          {campaign.readyToClaim
+                            ? 'Ready to claim!'
+                            : `Claim in ${campaign.claimCountdown}`}
+                        </span>
+                      </div>
+                      {campaign.readyToClaim ? (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); openCheckIn(); }}
+                          className="flex items-center gap-1 px-3 py-1 rounded-full bg-black"
+                        >
+                          <span className="text-[11px] font-semibold text-white">
+                            Claim
+                          </span>
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-1 px-2 py-0.5 rounded-full border border-[#56B548]/25 bg-white/60">
+                          <Plus
+                            className="w-3 h-3 text-[#3d8a34]"
+                            strokeWidth={2.5}
+                          />
+                          <span className="text-[11px] font-semibold text-[#3d8a34]">
+                            Deposit
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* PENDING CLAIMS — Section */}
+          <div className="px-5 pt-6">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#7E8795] mb-3">
+              Pending claims
+            </p>
+
+            <div className="flex flex-col gap-2.5">
+              {pendingClaims.map((campaign, i) => (
+                <div
+                  key={i}
+                  className="bg-[#EFF6FF] rounded-2xl border border-[#3B82F6]/10 overflow-hidden"
+                >
+                  <div className="flex gap-3 items-center p-3.5 pb-2.5">
+                    <div className="w-10 h-10 rounded-[8px] overflow-hidden shrink-0">
+                      <img
+                        src={campaign.image}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-[14px] text-black tracking-[-0.14px] truncate">
+                        {campaign.name}
+                      </p>
+                      <p className="text-[12px] text-[#72767f] font-medium mt-0.5">
+                        on {campaign.protocol}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-[18px] font-bold text-[#3B82F6] tracking-tight leading-none">
+                        {campaign.lastReward}
+                      </p>
+                      <p className="text-[11px] text-[#72767f] font-medium mt-0.5">
+                        unclaimed
+                      </p>
+                    </div>
+                  </div>
+                  {/* Bottom bar — ready to claim */}
+                  <div className="flex items-center justify-between px-3.5 py-2 bg-[#3B82F6]/8 border-t border-[#3B82F6]/10">
+                    <div className="flex items-center gap-1.5">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <circle cx="8" cy="8" r="7" stroke="#3B82F6" strokeWidth="1.5" />
+                        <path d="M4.5 8L7 10.5L11.5 5.5" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <span className="text-[12px] font-semibold text-[#2563EB]">
+                        Campaign finished
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-black">
+                      <span className="text-[11px] font-semibold text-white">
+                        Claim
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* SINGLE-CLAIM REWARDS — Section */}
+          <div className="px-5 pt-6 pb-8">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#7E8795] mb-3">
+              Single-claim rewards
+            </p>
+
+            <div className="flex flex-col gap-[17px]">
+              {singleClaimRewards.map((reward, i) => (
+                <div key={i} className="flex gap-3 items-center w-full">
+                  <ProjectIcon src={reward.image} bgBlack={reward.bgBlack} />
+                  <div className="flex flex-col gap-1 flex-1 min-w-0 justify-center">
+                    <p className="font-semibold text-[15px] text-black tracking-[-0.15px] truncate">
+                      {reward.name}
+                    </p>
+                    <p className="text-[14px] text-[#56B548] font-[500] tracking-[-0.14px] leading-none">
+                      {reward.reward}
+                      <span className="text-[#9CA2AD]"> · {reward.stat}</span>
+                    </p>
+                  </div>
+                  <ChevronRight
+                    className="w-[18px] h-[18px] text-black shrink-0"
+                    strokeWidth={2.5}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <HoldToEarnExplainer open={showExplainer} onClose={() => setShowExplainer(false)} />
+
+        {/* Check-In Drawer */}
+        <AnimatePresence>
+          {showCheckIn && (
+            <>
+              <motion.div
+                className="absolute inset-0 bg-black/30 z-20"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={closeCheckIn}
+              />
+              <motion.div
+                className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[28px] z-30"
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              >
+                {/* Handle */}
+                <div className="w-10 h-1 bg-[#E5E5E5] rounded-full mx-auto mt-3" />
+
+                <AnimatePresence mode="wait">
+                  {!checkInClaimed ? (
+                    <motion.div
+                      key="content"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="px-6 pt-4 pb-8"
+                    >
+                      {/* Header */}
+                      <div className="flex items-center justify-between mb-5">
+                        <h2 className="text-[20px] font-bold text-black tracking-tight">Check In</h2>
+                        <button onClick={closeCheckIn} className="w-8 h-8 rounded-full bg-[#F3F4F4] flex items-center justify-center">
+                          <X size={16} className="text-black" strokeWidth={2.5} />
+                        </button>
+                      </div>
+
+                      {/* Amount */}
+                      <div className="text-center mb-5">
+                        <p className="text-[48px] font-bold text-black tracking-[-1px] leading-none">$2.47</p>
+                        <p className="text-[14px] text-[#9CA2AD] font-medium mt-2">Available to claim</p>
+                      </div>
+
+                      {/* Rows */}
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9CA2AD] mb-1">Your rewards</p>
+                      {readyCampaigns.map((c, i) => (
+                        <div key={i} className={`flex items-center gap-3 py-3.5 ${i < readyCampaigns.length - 1 ? 'border-b border-[#F3F4F4]' : ''}`}>
+                          <div className="w-10 h-10 rounded-[10px] overflow-hidden shrink-0">
+                            <img src={c.image} alt="" className="w-full h-full object-cover" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-[14px] text-black tracking-[-0.14px]">{c.name}</p>
+                            <p className="text-[12px] font-semibold text-[#56B548] mt-0.5">{c.apy}% APY</p>
+                          </div>
+                          <span className="font-bold text-[16px] text-black shrink-0">{c.claimableAmount}</span>
+                        </div>
+                      ))}
+
+                      {/* Sponsored */}
+                      <div className="flex items-center gap-3 py-3.5 border-t border-[#F3F4F4] mb-4">
+                        <div className="w-10 h-10 rounded-[10px] bg-black overflow-hidden flex items-center justify-center shrink-0">
+                          <img src="/odos.png" alt="Odos" className="w-6 h-6 object-contain" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-semibold text-[13px] text-black tracking-[-0.13px]">Odos</p>
+                            <span className="text-[10px] font-medium text-[#C0C7D0] tracking-wide">Sponsored</span>
+                          </div>
+                          <p className="text-[12px] text-[#9CA2AD] font-medium mt-0.5">Best-in-class DEX aggregator on Base</p>
+                        </div>
+                        <div className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full border border-[#E5E5E5] bg-white">
+                          <span className="text-[12px] font-semibold text-black">Visit</span>
+                          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                            <path d="M2 8L8 2M8 2H4M8 2V6" stroke="#111113" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </div>
+                      </div>
+
+                      {/* Claim button */}
+                      <button
+                        onClick={() => setCheckInClaimed(true)}
+                        className="w-full h-14 rounded-full bg-[#111113] flex items-center justify-center"
+                      >
+                        <span className="font-semibold text-[17px] tracking-[-0.17px] text-white">Claim All</span>
+                      </button>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="success"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      className="px-6 pt-5 pb-8 flex flex-col items-center"
+                    >
+                      <motion.div
+                        className="w-[68px] h-[68px] rounded-full bg-[#56B548] flex items-center justify-center mb-4 shadow-[0_0_24px_rgba(86,181,72,0.35)]"
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 380, damping: 18 }}
+                      >
+                        <svg width="30" height="22" viewBox="0 0 30 22" fill="none">
+                          <path d="M2 11L10 19L28 2" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </motion.div>
+                      <p className="text-[15px] text-[#9CA2AD] font-medium">You claimed</p>
+                      <p className="text-[38px] font-bold text-black tracking-tight leading-tight mt-0.5">$2.47</p>
+
+                      <div className="rounded-xl border border-[#F0F0F0] overflow-hidden w-full mt-5 mb-4">
+                        {readyCampaigns.map((c, i) => (
+                          <div key={i} className={`flex items-center justify-between px-4 py-3 ${i < readyCampaigns.length - 1 ? 'border-b border-[#F0F0F0]' : ''}`}>
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-7 h-7 rounded-[6px] overflow-hidden">
+                                <img src={c.image} alt="" className="w-full h-full object-cover" />
+                              </div>
+                              <span className="text-[14px] font-medium text-black">{c.name}</span>
+                            </div>
+                            <span className="text-[14px] font-semibold text-black">{c.claimableAmount}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <p className="text-[13px] text-[#9CA2AD] font-medium">Your reward tokens are now in your wallet</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
