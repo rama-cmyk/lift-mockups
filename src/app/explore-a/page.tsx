@@ -74,6 +74,31 @@ const singleClaimRewards = [
   },
 ];
 
+const checkInFeed = [
+  {
+    type: 'announcement' as const,
+    icon: '/lift.png',
+    title: 'Hold to Earn is now live',
+    body: 'Hold tokens. Get paid. It\'s that easy.',
+    ctaLabel: 'Learn More',
+  },
+  {
+    type: 'opportunity' as const,
+    icon: '/aave.png',
+    title: 'Supply USDC on Aave',
+    apy: '5.60%',
+    badge: 'Just listed',
+    ctaLabel: 'Deposit',
+  },
+  {
+    type: 'sponsored' as const,
+    icon: '/odos.png',
+    bgBlack: true,
+    name: 'Odos',
+    tagline: 'Best-in-class DEX aggregator on Base',
+  },
+];
+
 /* ───── Progress Ring ───── */
 function MiniProgressRing({
   progress,
@@ -311,8 +336,6 @@ export default function ExploreA() {
   const [checkInClaimed, setCheckInClaimed] = useState(false);
   const router = useRouter();
 
-  const readyCampaigns = holdToEarnCampaigns.filter((c) => c.readyToClaim);
-
   function openCheckIn() { setShowCheckIn(true); }
   function closeCheckIn() {
     setShowCheckIn(false);
@@ -341,7 +364,7 @@ export default function ExploreA() {
                 Check In
               </span>
               <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 flex items-center justify-center text-[11px] font-bold text-white leading-none">
-                {readyCampaigns.length}
+                1
               </span>
             </button>
           </div>
@@ -605,51 +628,75 @@ export default function ExploreA() {
 
                       {/* Amount */}
                       <div className="text-center mb-5">
-                        <p className="text-[48px] font-bold text-black tracking-[-1px] leading-none">$2.47</p>
-                        <p className="text-[14px] text-[#9CA2AD] font-medium mt-2">Available to claim</p>
+                        <p className="text-[48px] font-bold text-black tracking-[-1px] leading-none">$0.05</p>
+                        <p className="text-[14px] text-[#9CA2AD] font-medium mt-2">Today's check-in reward</p>
                       </div>
 
-                      {/* Rows */}
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9CA2AD] mb-1">Your rewards</p>
-                      {readyCampaigns.map((c, i) => (
-                        <div key={i} className={`flex items-center gap-3 py-3.5 ${i < readyCampaigns.length - 1 ? 'border-b border-[#F3F4F4]' : ''}`}>
-                          <div className="w-10 h-10 rounded-[10px] overflow-hidden shrink-0">
-                            <img src={c.image} alt="" className="w-full h-full object-cover" />
+                      {/* Feed */}
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9CA2AD] mb-1">What's new</p>
+                      {checkInFeed.map((item, i) => (
+                        <div key={i} className={`flex items-center gap-3 py-3.5 ${i < checkInFeed.length - 1 ? 'border-b border-[#F3F4F4]' : ''}`}>
+                          {/* Icon */}
+                          <div className={`w-10 h-10 rounded-[10px] overflow-hidden shrink-0 flex items-center justify-center ${item.bgBlack ? 'bg-black' : ''}`}>
+                            <img src={item.icon} alt="" className={item.bgBlack ? 'w-6 h-6 object-contain' : 'w-full h-full object-cover'} />
                           </div>
+
+                          {/* Content */}
                           <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-[14px] text-black tracking-[-0.14px]">{c.name}</p>
-                            <p className="text-[12px] font-semibold text-[#56B548] mt-0.5">{c.apy}% APY</p>
+                            {item.type === 'announcement' && (
+                              <>
+                                <p className="font-semibold text-[14px] text-black tracking-[-0.14px]">{item.title}</p>
+                                <p className="text-[12px] text-[#9CA2AD] font-medium mt-0.5">{item.body}</p>
+                              </>
+                            )}
+                            {item.type === 'opportunity' && (
+                              <>
+                                <div className="flex items-center gap-1.5">
+                                  <p className="font-semibold text-[14px] text-black tracking-[-0.14px]">{item.title}</p>
+                                  <span className="text-[10px] font-semibold bg-[#EFF6FF] text-[#3B82F6] px-1.5 py-0.5 rounded-full leading-none">{item.badge}</span>
+                                </div>
+                                <p className="text-[12px] font-semibold text-[#56B548] mt-0.5">{item.apy} APY</p>
+                              </>
+                            )}
+                            {item.type === 'sponsored' && (
+                              <>
+                                <div className="flex items-center gap-1.5">
+                                  <p className="font-semibold text-[13px] text-black tracking-[-0.13px]">{item.name}</p>
+                                  <span className="text-[10px] font-medium text-[#C0C7D0] tracking-wide">Sponsored</span>
+                                </div>
+                                <p className="text-[12px] text-[#9CA2AD] font-medium mt-0.5">{item.tagline}</p>
+                              </>
+                            )}
                           </div>
-                          <span className="font-bold text-[16px] text-black shrink-0">{c.claimableAmount}</span>
+
+                          {/* CTA */}
+                          {item.type === 'announcement' && (
+                            <button onClick={() => { closeCheckIn(); setShowExplainer(true); }} className="shrink-0 text-[12px] font-semibold text-black whitespace-nowrap">
+                              {item.ctaLabel} →
+                            </button>
+                          )}
+                          {item.type === 'opportunity' && (
+                            <button onClick={() => { closeCheckIn(); router.push('/detail-c'); }} className="shrink-0 flex items-center px-3 py-1.5 rounded-full bg-[#111113]">
+                              <span className="text-[12px] font-semibold text-white">{item.ctaLabel}</span>
+                            </button>
+                          )}
+                          {item.type === 'sponsored' && (
+                            <div className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full border border-[#E5E5E5] bg-white">
+                              <span className="text-[12px] font-semibold text-black">Visit</span>
+                              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                                <path d="M2 8L8 2M8 2H4M8 2V6" stroke="#111113" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            </div>
+                          )}
                         </div>
                       ))}
 
-                      {/* Sponsored */}
-                      <div className="flex items-center gap-3 py-3.5 border-t border-[#F3F4F4] mb-4">
-                        <div className="w-10 h-10 rounded-[10px] bg-black overflow-hidden flex items-center justify-center shrink-0">
-                          <img src="/odos.png" alt="Odos" className="w-6 h-6 object-contain" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <p className="font-semibold text-[13px] text-black tracking-[-0.13px]">Odos</p>
-                            <span className="text-[10px] font-medium text-[#C0C7D0] tracking-wide">Sponsored</span>
-                          </div>
-                          <p className="text-[12px] text-[#9CA2AD] font-medium mt-0.5">Best-in-class DEX aggregator on Base</p>
-                        </div>
-                        <div className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full border border-[#E5E5E5] bg-white">
-                          <span className="text-[12px] font-semibold text-black">Visit</span>
-                          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                            <path d="M2 8L8 2M8 2H4M8 2V6" stroke="#111113" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </div>
-                      </div>
-
-                      {/* Claim button */}
+                      {/* Check In button */}
                       <button
                         onClick={() => setCheckInClaimed(true)}
-                        className="w-full h-14 rounded-full bg-[#111113] flex items-center justify-center"
+                        className="w-full h-14 rounded-full bg-[#111113] flex items-center justify-center mt-4"
                       >
-                        <span className="font-semibold text-[17px] tracking-[-0.17px] text-white">Claim All</span>
+                        <span className="font-semibold text-[17px] tracking-[-0.17px] text-white">Check In</span>
                       </button>
                     </motion.div>
                   ) : (
@@ -670,24 +717,12 @@ export default function ExploreA() {
                           <path d="M2 11L10 19L28 2" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       </motion.div>
-                      <p className="text-[15px] text-[#9CA2AD] font-medium">You claimed</p>
-                      <p className="text-[38px] font-bold text-black tracking-tight leading-tight mt-0.5">$2.47</p>
+                      <p className="text-[15px] text-[#9CA2AD] font-medium">You're checked in</p>
+                      <p className="text-[38px] font-bold text-black tracking-tight leading-tight mt-0.5">$0.05</p>
 
-                      <div className="rounded-xl border border-[#F0F0F0] overflow-hidden w-full mt-5 mb-4">
-                        {readyCampaigns.map((c, i) => (
-                          <div key={i} className={`flex items-center justify-between px-4 py-3 ${i < readyCampaigns.length - 1 ? 'border-b border-[#F0F0F0]' : ''}`}>
-                            <div className="flex items-center gap-2.5">
-                              <div className="w-7 h-7 rounded-[6px] overflow-hidden">
-                                <img src={c.image} alt="" className="w-full h-full object-cover" />
-                              </div>
-                              <span className="text-[14px] font-medium text-black">{c.name}</span>
-                            </div>
-                            <span className="text-[14px] font-semibold text-black">{c.claimableAmount}</span>
-                          </div>
-                        ))}
-                      </div>
+                      <p className="text-[14px] text-[#9CA2AD] font-medium mt-5 mb-1">$0.05 added to your wallet</p>
 
-                      <p className="text-[13px] text-[#9CA2AD] font-medium">Your reward tokens are now in your wallet</p>
+                      <p className="text-[13px] text-[#9CA2AD] font-medium mt-4">Come back tomorrow for another reward</p>
                     </motion.div>
                   )}
                 </AnimatePresence>
