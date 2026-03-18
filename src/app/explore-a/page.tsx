@@ -626,6 +626,12 @@ export default function ExploreA() {
                         </button>
                       </div>
 
+                      {/* Streak */}
+                      <div className="flex items-center justify-center gap-1.5 mb-1">
+                        <span className="text-[20px]">🔥</span>
+                        <p className="text-[16px] font-bold text-black tracking-[-0.16px]">3-day streak</p>
+                      </div>
+
                       {/* Amount */}
                       <div className="text-center mb-5">
                         <p className="text-[48px] font-bold text-black tracking-[-1px] leading-none">$0.05</p>
@@ -633,7 +639,7 @@ export default function ExploreA() {
                       </div>
 
                       {/* Feed */}
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9CA2AD] mb-1">What's new</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9CA2AD] mb-1">What's new ({checkInFeed.length})</p>
                       {checkInFeed.map((item, i) => (
                         <div key={i} className={`flex items-center gap-3 py-3.5 ${i < checkInFeed.length - 1 ? 'border-b border-[#F3F4F4]' : ''}`}>
                           {/* Icon */}
@@ -720,9 +726,14 @@ export default function ExploreA() {
                       <p className="text-[15px] text-[#9CA2AD] font-medium">You're checked in</p>
                       <p className="text-[38px] font-bold text-black tracking-tight leading-tight mt-0.5">$0.05</p>
 
-                      <p className="text-[14px] text-[#9CA2AD] font-medium mt-5 mb-1">$0.05 added to your wallet</p>
+                      <div className="flex items-center gap-1.5 mt-3">
+                        <span className="text-[16px]">🔥</span>
+                        <p className="text-[15px] font-bold text-black tracking-[-0.15px]">3-day streak!</p>
+                      </div>
 
-                      <p className="text-[13px] text-[#9CA2AD] font-medium mt-4">Come back tomorrow for another reward</p>
+                      <p className="text-[14px] text-[#9CA2AD] font-medium mt-4">$0.05 added to your wallet</p>
+
+                      <p className="text-[13px] text-[#9CA2AD] font-medium mt-5">New opportunities dropping tomorrow</p>
                     </motion.div>
                   )}
                 </AnimatePresence>
