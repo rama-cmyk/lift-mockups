@@ -312,6 +312,73 @@ function HoldToEarnBanner({ onClick }: { onClick?: () => void }) {
   );
 }
 
+/* ───── Streak Pill (animates 3 → 4) ───── */
+function StreakPill() {
+  const [bumped, setBumped] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setBumped(true);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <div className="relative mb-4 rounded-full" style={{ padding: '1px' }}>
+      {/* Border shimmer — sweeps left to right behind the pill */}
+      <div className="absolute inset-0 rounded-full overflow-hidden">
+        {bumped && (
+          <motion.div
+            className="absolute top-0 bottom-0 pointer-events-none"
+            style={{
+              width: '300%',
+              left: '-200%',
+              background: 'linear-gradient(90deg, transparent 55%, rgba(217,119,60,0.25) 65%, rgba(217,119,60,0.25) 68%, transparent 78%)',
+            }}
+            initial={{ x: '0%' }}
+            animate={{ x: '100%' }}
+            transition={{ duration: 1.1, ease: 'easeInOut' }}
+          />
+        )}
+      </div>
+      <div className="relative flex items-center gap-1.5 px-4 py-2 bg-[#FFF7ED] rounded-full overflow-hidden">
+        {/* Surface shimmer sweep */}
+        {bumped && (
+          <motion.div
+            className="absolute top-0 bottom-0 pointer-events-none"
+            style={{
+              width: '300%',
+              left: '-200%',
+              background: 'linear-gradient(90deg, transparent 55%, rgba(255,255,255,0.9) 65%, transparent 75%)',
+            }}
+            initial={{ x: '0%' }}
+            animate={{ x: '100%' }}
+            transition={{ duration: 1.1, ease: 'easeInOut' }}
+          />
+        )}
+        <span className="text-[16px] relative z-10">🔥</span>
+        <p className="text-[14px] font-bold text-[#C2410C] tracking-[-0.14px] relative z-10 flex items-baseline">
+          <span className="inline-block w-[9px] relative overflow-hidden" style={{ height: '1.1em' }}>
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={bumped ? 4 : 3}
+                initial={bumped ? { y: '-100%', opacity: 0 } : false}
+                animate={{ y: '0%', opacity: 1 }}
+                exit={{ y: '100%', opacity: 0 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                className="inline-block absolute left-0 top-0"
+              >
+                {bumped ? 4 : 3}
+              </motion.span>
+            </AnimatePresence>
+          </span>
+          -day streak
+        </p>
+      </div>
+    </div>
+  );
+}
+
 /* ───── Project Icon ───── */
 function ProjectIcon({ src, bgBlack }: { src: string; bgBlack?: boolean }) {
   return (
@@ -626,14 +693,16 @@ export default function ExploreA() {
                         </button>
                       </div>
 
-                      {/* Streak */}
-                      <div className="flex items-center justify-center gap-1.5 mb-1">
-                        <span className="text-[20px]">🔥</span>
-                        <p className="text-[16px] font-bold text-black tracking-[-0.16px]">3-day streak</p>
+                      {/* Streak pill */}
+                      <div className="flex justify-center mb-4">
+                        <div className="flex items-center gap-1.5 px-4 py-2 bg-[#FFF7ED] rounded-full">
+                          <span className="text-[16px]">🔥</span>
+                          <p className="text-[14px] font-bold text-[#C2410C] tracking-[-0.14px]">3-day streak</p>
+                        </div>
                       </div>
 
-                      {/* Amount */}
-                      <div className="text-center mb-5">
+                      {/* Amount + subtitle — tight group */}
+                      <div className="text-center mb-6">
                         <p className="text-[48px] font-bold text-black tracking-[-1px] leading-none">$0.05</p>
                         <p className="text-[14px] text-[#9CA2AD] font-medium mt-2">Today's check-in reward</p>
                       </div>
@@ -711,10 +780,11 @@ export default function ExploreA() {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
-                      className="px-6 pt-5 pb-8 flex flex-col items-center"
+                      className="px-6 pt-8 pb-8 flex flex-col items-center"
                     >
+                      {/* Checkmark */}
                       <motion.div
-                        className="w-[68px] h-[68px] rounded-full bg-[#56B548] flex items-center justify-center mb-4 shadow-[0_0_24px_rgba(86,181,72,0.35)]"
+                        className="w-[68px] h-[68px] rounded-full bg-[#56B548] flex items-center justify-center mb-6 shadow-[0_0_24px_rgba(86,181,72,0.35)]"
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         transition={{ type: 'spring', stiffness: 380, damping: 18 }}
@@ -723,17 +793,21 @@ export default function ExploreA() {
                           <path d="M2 11L10 19L28 2" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       </motion.div>
-                      <p className="text-[15px] text-[#9CA2AD] font-medium">You're checked in</p>
-                      <p className="text-[38px] font-bold text-black tracking-tight leading-tight mt-0.5">$0.05</p>
 
-                      <div className="flex items-center gap-1.5 mt-3">
-                        <span className="text-[16px]">🔥</span>
-                        <p className="text-[15px] font-bold text-black tracking-[-0.15px]">3-day streak!</p>
-                      </div>
+                      {/* Streak pill — animates 3 → 4 */}
+                      <StreakPill />
 
-                      <p className="text-[14px] text-[#9CA2AD] font-medium mt-4">$0.05 added to your wallet</p>
+                      {/* Amount + label */}
+                      <p className="text-[42px] font-bold text-black tracking-tight leading-none">$0.05</p>
+                      <p className="text-[14px] text-[#9CA2AD] font-medium mt-3">You're checked in</p>
 
-                      <p className="text-[13px] text-[#9CA2AD] font-medium mt-5">New opportunities dropping tomorrow</p>
+                      {/* Done button */}
+                      <button
+                        onClick={closeCheckIn}
+                        className="w-full h-14 rounded-full bg-white border border-[#E5E5E5] flex items-center justify-center mt-4"
+                      >
+                        <span className="font-semibold text-[17px] tracking-[-0.17px] text-black">Done</span>
+                      </button>
                     </motion.div>
                   )}
                 </AnimatePresence>
